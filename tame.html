@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Barcode Helper</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+  <style>
+    body {
+      background: #f5f6f8;
+    }
+
+    .barcode-box {
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: 18px;
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
+    }
+
+    .barcode-box:active {
+      transform: scale(.99);
+    }
+
+    .saved-barcode-box {
+      min-height: 115px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #f0f0f0;
+      overflow: hidden;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    .saved-barcode-box:active {
+      transform: scale(.98);
+    }
+
+    .saved-barcode-box svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .modal-bg {
+      background: rgba(0,0,0,.6);
+    }
+
+    .hide {
+      display: none !important;
+    }
+
+    #scanScreen {
+      touch-action: manipulation;
+    }
+
+    .scan-barcode {
+      max-width: 100%;
+      height: auto;
+    }
+
+    input:focus,
+    select:focus {
+      box-shadow: 0 0 0 2px rgba(239,68,68,.12);
+    }
+  </style>
+</head>
+
+<body class="text-gray-800">
+
+<div class="max-w-md mx-auto min-h-screen bg-white">
+
+  <!-- HEADER -->
+  <header class="bg-red-600 text-white px-5 py-4">
+
+    <h1 class="text-xl font-bold">
+      Barcode Helper
+    </h1>
+
+    <p class="text-sm text-red-100">
+      Buat dan simpan barcode produk
+    </p>
+
+  </header>
+
+
+  <!-- GENERATOR -->
+
+  <main class="p-5">
+
+    <div class="mb-5">
+
+      <h2 class="text-lg font-bold">
+        Buat Barcode
+      </h2>
+
+      <p class="text-sm text-gray-500">
+        Masukkan nama dan PLU produk.
+      </p>
+
+    </div>
+
+
+    <!-- NAMA -->
+
+    <div class="mb-4">
+
+      <label class="block text-sm font-semibold mb-1">
+        Nama Barcode / Produk
+      </label>
+
+      <input
+        id="nama"
+        type="text"
+        placeholder="Contoh: Polo Coklat"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-red-500"
+      >
+
+    </div>
+
+
+    <!-- PLU -->
+
+    <div class="mb-4">
+
+      <label class="block text-sm font-semibold mb-1">
+        PLU
+      </label>
+
+      <input
+        id="plu"
+        type="text"
+        inputmode="numeric"
+        placeholder="Masukkan PLU / kode barcode"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-red-500"
+      >
+
+    </div>
+
+
+    <!-- FORMAT -->
+
+    <div class="mb-5">
+
+      <label class="block text-sm font-semibold mb-1">
+        Format Barcode
+      </label>
+
+      <select
+        id="format"
+        class="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white outline-none focus:border-red-500"
+      >
+
+        <option value="CODE128">
+          CODE 128
+        </option>
+
+        <option value="EAN13">
+          EAN-13
+        </option>
+
+        <option value="EAN8">
+          EAN-8
+        </option>
+
+        <option value="UPC">
+          UPC-A
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <!-- PREVIEW -->
+
+    <div class="mb-5">
+
+      <div class="flex justify-between items-center mb-2">
+
+        <span class="text-sm font-semibold">
+          Preview Barcode
+        </span>
+
+        <span
+          id="status"
+          class="text-xs text-gray-400"
+        >
+          Belum ada PLU
+        </span>
+
+      </div>
+
+
+      <div
+        class="barcode-box p-4"
+        onclick="perbesarPreview()"
+      >
+
+        <svg id="barcode"></svg>
+
+      </div>
+
+
+      <div class="text-center text-xs text-gray-400 mt-2">
+        Tekan barcode untuk memperbesar
+      </div>
+
+    </div>
+
+
+    <!-- ERROR -->
+
+    <div
+      id="error"
+      class="hide mb-4 bg-red-50 text-red-600 text-sm rounded-xl p-3"
+    ></div>
+
+
+    <!-- SIMPAN -->
+
+    <button
+      onclick="bukaPilihanSimpan()"
+      class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl active:scale-[.98] transition"
+    >
+      Simpan Barcode
+    </button>
+
+
+    <!-- BARCODE TERSIMPAN -->
+
+    <section class="mt-8">
+
+      <div class="mb-3">
+
+        <h2 class="font-bold text-lg">
+          Barcode Tersimpan
+        </h2>
+
+        <p class="text-xs text-gray-500">
+          Cari nama produk atau PLU yang sudah disimpan.
+        </p>
+
+      </div>
+
+
+      <!-- SEARCH -->
+
+      <div class="relative mb-4">
+
+        <input
+          id="searchInput"
+          type="search"
+          placeholder="🔎 Cari nama produk / PLU..."
+          oninput="cariBarcode()"
+          class="w-full border border-gray-300 rounded-xl px-4 py-3 pr-10 outline-none focus:border-red-500"
+        >
+
+        <button
+          id="clearSearch"
+          onclick="hapusPencarian()"
+          class="hide absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <!-- FILTER -->
+
+      <div class="flex gap-2 mb-4">
+
+        <button
+          onclick="setFilter('semua')"
+          id="filter-semua"
+          class="filter-btn bg-red-600 text-white px-3 py-2 rounded-lg text-xs font-semibold"
+        >
+          Semua
+        </button>
+
+        <button
+          onclick="setFilter('kategori')"
+          id="filter-kategori"
+          class="filter-btn bg-gray-100 px-3 py-2 rounded-lg text-xs font-semibold"
+        >
+          Kategori
+        </button>
+
+        <button
+          onclick="setFilter('biasa')"
+          id="filter-biasa"
+          class="filter-btn bg-gray-100 px-3 py-2 rounded-lg text-xs font-semibold"
+        >
+          Biasa
+        </button>
+
+      </div>
+
+
+      <div id="listTersimpan"></div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- MODAL PILIHAN SIMPAN -->
+
+<div
+  id="modalSimpan"
+  class="hide fixed inset-0 modal-bg z-50 flex items-end sm:items-center justify-center"
+>
+
+  <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl p-5">
+
+    <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
+
+    <h2 class="text-xl font-bold mb-1">
+      Simpan Barcode
+    </h2>
+
+    <p class="text-sm text-gray-500 mb-5">
+      Mau disimpan sebagai apa?
+    </p>
+
+
+    <button
+      onclick="pilihKategori()"
+      class="w-full border border-gray-200 rounded-2xl p-4 text-left mb-3 hover:bg-gray-50"
+    >
+
+      <div class="font-bold">
+        📁 Kategori
+      </div>
+
+      <div class="text-xs text-gray-500 mt-1">
+        Masukkan produk ke kategori
+      </div>
+
+    </button>
+
+
+    <button
+      onclick="simpanBiasa()"
+      class="w-full border border-gray-200 rounded-2xl p-4 text-left hover:bg-gray-50"
+    >
+
+      <div class="font-bold">
+        📦 Non Kategori / Biasa
+      </div>
+
+      <div class="text-xs text-gray-500 mt-1">
+        Simpan tanpa kategori
+      </div>
+
+    </button>
+
+
+    <button
+      onclick="tutupSemuaModal()"
+      class="w-full mt-4 py-3 text-gray-500 font-semibold"
+    >
+      Batal
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- PILIH KATEGORI -->
+
+<div
+  id="modalKategori"
+  class="hide fixed inset-0 modal-bg z-50 flex items-end sm:items-center justify-center"
+>
+
+  <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto">
+
+    <div class="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5"></div>
+
+    <h2 class="text-xl font-bold mb-1">
+      Pilih Kategori
+    </h2>
+
+    <p class="text-sm text-gray-500 mb-4">
+      Barcode akan disimpan di kategori ini.
+    </p>
+
+
+    <input
+      id="searchKategori"
+      type="search"
+      placeholder="🔎 Cari kategori..."
+      oninput="renderPilihanKategori()"
+      class="w-full border border-gray-300 rounded-xl px-4 py-3 mb-4 outline-none focus:border-red-500"
+    >
+
+
+    <button
+      onclick="buatKategori()"
+      class="w-full border-2 border-dashed border-red-300 text-red-600 rounded-xl p-3 font-semibold mb-4"
+    >
+      + Buat Kategori Baru
+    </button>
+
+
+    <div id="listKategoriPilihan"></div>
+
+
+    <button
+      onclick="tutupSemuaModal()"
+      class="w-full mt-4 py-3 text-gray-500 font-semibold"
+    >
+      Batal
+    </button>
+
+  </div>
+
+</div>
+
+
+<!-- BUAT KATEGORI -->
+
+<div
+  id="modalBuatKategori"
+  class="hide fixed inset-0 modal-bg z-[60] flex items-center justify-center p-5"
+>
+
+  <div class="bg-white w-full max-w-md rounded-2xl p-5">
+
+    <h2 class="text-xl font-bold mb-1">
+      Kategori Baru
+    </h2>
+
+    <p class="text-sm text-gray-500 mb-4">
+      Contoh: SAY BREAD
+    </p>
+
+
+    <input
+      id="namaKategori"
+      type="text"
+      placeholder="Nama kategori"
+      class="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:border-red-500"
+    >
+
+
+    <div class="flex gap-2 mt-4">
+
+      <button
+        onclick="tutupBuatKategori()"
+        class="flex-1 py-3 bg-gray-100 rounded-xl font-semibold"
+      >
+        Batal
+      </button>
+
+      <button
+        onclick="simpanKategoriBaru()"
+        class="flex-1 py-3 bg-red-600 text-white rounded-xl font-semibold"
+      >
+        Simpan
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- FULLSCREEN BARCODE -->
+
+<div
+  id="scanScreen"
+  class="hide fixed inset-0 bg-white z-[100] flex flex-col"
+>
+
+  <div class="flex items-center justify-between px-5 py-4 border-b">
+
+    <button
+      onclick="tutupScan()"
+      class="text-red-600 font-bold text-3xl leading-none"
+    >
+      ×
+    </button>
+
+    <div class="text-center">
+
+      <div
+        id="scanNama"
+        class="font-bold text-sm"
+      ></div>
+
+      <div
+        id="scanPlu"
+        class="text-xs text-gray-500"
+      ></div>
+
+    </div>
+
+    <div class="w-6"></div>
+
+  </div>
+
+
+  <div
+    class="flex-1 flex flex-col items-center justify-center px-5"
+  >
+
+    <svg
+      id="scanBarcode"
+      class="scan-barcode"
+    ></svg>
+
+
+    <div class="mt-5 text-center">
+
+      <div class="text-xs text-gray-400 mb-1">
+        Barcode
+      </div>
+
+      <div
+        id="scanKodeText"
+        class="text-2xl font-bold tracking-widest"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <div class="px-5 pb-6">
+
+    <button
+      onclick="tutupScan()"
+      class="w-full bg-red-600 text-white font-bold py-4 rounded-xl"
+    >
+      Tutup
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+// =================================================
+// PENYIMPANAN PER PERANGKAT / BROWSER
+// =================================================
+
+let deviceId =
+  localStorage.getItem(
+    "barcodeHelperDeviceId"
+  );
+
+
+if (!deviceId) {
+
+  deviceId =
+    "device_" +
+    Date.now() +
+    "_" +
+    Math.random()
+      .toString(36)
+      .substring(2, 10);
+
+  localStorage.setItem(
+    "barcodeHelperDeviceId",
+    deviceId
+  );
+
+}
+
+
+const STORAGE_KEY =
+  "barcodeHelperData_" + deviceId;
+
+
+// =================================================
+// DATA
+// =================================================
+
+let data =
+  JSON.parse(
+    localStorage.getItem(STORAGE_KEY)
+  ) || {
+
+    categories: [],
+
+    items: []
+
+  };
+
+
+let filterAktif =
+  "semua";
+
+
+// =================================================
+// ELEMENT
+// =================================================
+
+const namaInput =
+  document.getElementById("nama");
+
+const pluInput =
+  document.getElementById("plu");
+
+const formatInput =
+  document.getElementById("format");
+
+
+// =================================================
+// GENERATE BARCODE UTAMA
+// =================================================
+
+function generateBarcode() {
+
+  const plu =
+    pluInput.value.trim();
+
+  const format =
+    formatInput.value;
+
+  const error =
+    document.getElementById("error");
+
+  const status =
+    document.getElementById("status");
+
+  const barcode =
+    document.getElementById("barcode");
+
+
+  error.classList.add("hide");
+
+  barcode.innerHTML = "";
+
+
+  if (!plu) {
+
+    status.innerText =
+      "Belum ada PLU";
+
+    return;
+
+  }
+
+
+  try {
+
+    JsBarcode(
+      barcode,
+      plu,
+      {
+
+        format: format,
+
+        width: 2,
+
+        height: 90,
+
+        displayValue: true,
+
+        margin: 10,
+
+        fontSize: 16,
+
+        textMargin: 5,
+
+        background: "#ffffff",
+
+        lineColor: "#111111"
+
+      }
+    );
+
+
+    status.innerText =
+      format;
+
+  }
+
+  catch (err) {
+
+    status.innerText =
+      "PLU tidak valid";
+
+    error.innerText =
+      "PLU tidak cocok dengan format " +
+      format;
+
+    error.classList.remove("hide");
+
+  }
+
+}
+
+
+pluInput.addEventListener(
+  "input",
+  generateBarcode
+);
+
+
+formatInput.addEventListener(
+  "change",
+  generateBarcode
+);
+
+
+// =================================================
+// PERBESAR PREVIEW UTAMA
+// =================================================
+
+function perbesarPreview() {
+
+  const plu =
+    pluInput.value.trim();
+
+  const format =
+    formatInput.value;
+
+  const nama =
+    namaInput.value.trim() ||
+    "Tanpa Nama";
+
+
+  if (!plu) {
+
+    alert(
+      "Masukkan PLU terlebih dahulu."
+    );
+
+    pluInput.focus();
+
+    return;
+
+  }
+
+
+  try {
+
+    const temp =
+      document.createElement("svg");
+
+
+    JsBarcode(
+      temp,
+      plu,
+      {
+        format: format
+      }
+    );
+
+  }
+
+  catch (err) {
+
+    alert(
+      "PLU tidak cocok dengan format " +
+      format
+    );
+
+    return;
+
+  }
+
+
+  bukaFullscreenBarcode(
+    nama,
+    plu,
+    format
+  );
+
+}
+
+
+// =================================================
+// PERBESAR BARCODE TERSIMPAN
+// =================================================
+
+function perbesarBarcodeTersimpan(id) {
+
+  const item =
+    data.items.find(
+      item =>
+        item.id === id
+    );
+
+
+  if (!item) return;
+
+
+  bukaFullscreenBarcode(
+    item.name,
+    item.plu,
+    item.format
+  );
+
+}
+
+
+// =================================================
+// FULLSCREEN BARCODE
+// =================================================
+
+function bukaFullscreenBarcode(
+  nama,
+  plu,
+  format
+) {
+
+  document.getElementById(
+    "scanNama"
+  ).innerText =
+    nama;
+
+
+  document.getElementById(
+    "scanPlu"
+  ).innerText =
+    plu;
+
+
+  document.getElementById(
+    "scanKodeText"
+  ).innerText =
+    plu;
+
+
+  document.getElementById(
+    "scanScreen"
+  ).classList.remove("hide");
+
+
+  setTimeout(() => {
+
+    const svg =
+      document.getElementById(
+        "scanBarcode"
+      );
+
+
+    svg.innerHTML = "";
+
+
+    try {
+
+      JsBarcode(
+        svg,
+        plu,
+        {
+
+          format: format,
+
+          width: 4,
+
+          height: 190,
+
+          displayValue: true,
+
+          fontSize: 22,
+
+          margin: 20,
+
+          background: "#ffffff",
+
+          lineColor: "#111111"
+
+        }
+      );
+
+    }
+
+    catch (err) {
+
+      svg.innerHTML = "";
+
+    }
+
+  }, 50);
+
+}
+
+
+// =================================================
+// TUTUP FULLSCREEN
+// =================================================
+
+function tutupScan() {
+
+  document
+    .getElementById("scanScreen")
+    .classList.add("hide");
+
+}
+
+
+// =================================================
+// BUKA PILIHAN SIMPAN
+// =================================================
+
+function bukaPilihanSimpan() {
+
+  const plu =
+    pluInput.value.trim();
+
+
+  if (!plu) {
+
+    alert(
+      "Masukkan PLU terlebih dahulu."
+    );
+
+    pluInput.focus();
+
+    return;
+
+  }
+
+
+  generateBarcode();
+
+
+  if (
+    document
+      .getElementById("status")
+      .innerText ===
+    "PLU tidak valid"
+  ) {
+
+    return;
+
+  }
+
+
+  document
+    .getElementById("modalSimpan")
+    .classList.remove("hide");
+
+}
+
+
+// =================================================
+// TUTUP MODAL
+// =================================================
+
+function tutupSemuaModal() {
+
+  document
+    .getElementById("modalSimpan")
+    .classList.add("hide");
+
+  document
+    .getElementById("modalKategori")
+    .classList.add("hide");
+
+  document
+    .getElementById("modalBuatKategori")
+    .classList.add("hide");
+
+}
+
+
+function tutupBuatKategori() {
+
+  document
+    .getElementById("modalBuatKategori")
+    .classList.add("hide");
+
+}
+
+
+// =================================================
+// PILIH KATEGORI
+// =================================================
+
+function pilihKategori() {
+
+  document
+    .getElementById("modalSimpan")
+    .classList.add("hide");
+
+
+  document.getElementById(
+    "searchKategori"
+  ).value = "";
+
+
+  renderPilihanKategori();
+
+
+  document
+    .getElementById("modalKategori")
+    .classList.remove("hide");
+
+}
+
+
+// =================================================
+// RENDER PILIHAN KATEGORI
+// =================================================
+
+function renderPilihanKategori() {
+
+  const container =
+    document.getElementById(
+      "listKategoriPilihan"
+    );
+
+
+  const search =
+    (
+      document.getElementById(
+        "searchKategori"
+      )?.value || ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  container.innerHTML = "";
+
+
+  const categories =
+    data.categories.filter(
+      category =>
+        category.name
+          .toLowerCase()
+          .includes(search)
+    );
+
+
+  if (categories.length === 0) {
+
+    container.innerHTML = `
+
+      <div class="text-center py-8 text-gray-400">
+
+        <div class="text-3xl mb-2">
+          📁
+        </div>
+
+        ${
+          data.categories.length === 0
+            ? "Belum ada kategori."
+            : "Kategori tidak ditemukan."
+        }
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  categories.forEach(
+    category => {
+
+      const jumlah =
+        data.items.filter(
+          item =>
+            item.categoryId ===
+            category.id
+        ).length;
+
+
+      container.innerHTML += `
+
+        <button
+          onclick="simpanKeKategori('${category.id}')"
+          class="w-full border border-gray-200 rounded-xl p-4 mb-2 text-left hover:bg-gray-50 active:bg-gray-100"
+        >
+
+          <div class="flex justify-between items-center">
+
+            <div>
+
+              <div class="font-bold">
+                📁 ${escapeHTML(category.name)}
+              </div>
+
+              <div class="text-xs text-gray-500 mt-1">
+                ${jumlah} barcode
+              </div>
+
+            </div>
+
+            <div class="text-gray-400 text-xl">
+              ›
+            </div>
+
+          </div>
+
+        </button>
+
+      `;
+
+    }
+  );
+
+}
+
+
+// =================================================
+// BUAT KATEGORI
+// =================================================
+
+function buatKategori() {
+
+  document
+    .getElementById("modalKategori")
+    .classList.add("hide");
+
+
+  document
+    .getElementById("namaKategori")
+    .value = "";
+
+
+  document
+    .getElementById("modalBuatKategori")
+    .classList.remove("hide");
+
+}
+
+
+// =================================================
+// SIMPAN KATEGORI BARU
+// =================================================
+
+function simpanKategoriBaru() {
+
+  const input =
+    document.getElementById(
+      "namaKategori"
+    );
+
+
+  const name =
+    input.value.trim();
+
+
+  if (!name) {
+
+    alert(
+      "Nama kategori belum diisi."
+    );
+
+    input.focus();
+
+    return;
+
+  }
+
+
+  const sudahAda =
+    data.categories.some(
+      category =>
+        category.name.toLowerCase() ===
+        name.toLowerCase()
+    );
+
+
+  if (sudahAda) {
+
+    alert(
+      "Kategori dengan nama tersebut sudah ada."
+    );
+
+    return;
+
+  }
+
+
+  const category = {
+
+    id:
+      "cat_" +
+      Date.now() +
+      "_" +
+      Math.random()
+        .toString(36)
+        .substring(2, 7),
+
+    name:
+      name
+
+  };
+
+
+  data.categories.push(
+    category
+  );
+
+
+  simpanDataBarcode(
+    category.id
+  );
+
+
+  tutupSemuaModal();
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// SIMPAN KE KATEGORI
+// =================================================
+
+function simpanKeKategori(
+  categoryId
+) {
+
+  simpanDataBarcode(
+    categoryId
+  );
+
+
+  tutupSemuaModal();
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// SIMPAN BIASA
+// =================================================
+
+function simpanBiasa() {
+
+  simpanDataBarcode(
+    null
+  );
+
+
+  tutupSemuaModal();
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// SIMPAN DATA BARCODE
+// =================================================
+
+function simpanDataBarcode(
+  categoryId
+) {
+
+  const plu =
+    pluInput.value.trim();
+
+  const format =
+    formatInput.value;
+
+
+  if (!plu) {
+
+    alert(
+      "PLU belum diisi."
+    );
+
+    return;
+
+  }
+
+
+  const item = {
+
+    id:
+      "item_" +
+      Date.now() +
+      "_" +
+      Math.random()
+        .toString(36)
+        .substring(2, 8),
+
+    name:
+      namaInput.value.trim()
+      || "Tanpa Nama",
+
+    plu:
+      plu,
+
+    format:
+      format,
+
+    categoryId:
+      categoryId,
+
+    createdAt:
+      new Date().toISOString()
+
+  };
+
+
+  data.items.push(item);
+
+  saveData();
+
+}
+
+
+// =================================================
+// LOCAL STORAGE
+// =================================================
+
+function saveData() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(data)
+  );
+
+}
+
+
+// =================================================
+// PENCARIAN
+// =================================================
+
+function cariBarcode() {
+
+  const input =
+    document.getElementById(
+      "searchInput"
+    );
+
+
+  const clear =
+    document.getElementById(
+      "clearSearch"
+    );
+
+
+  if (input.value.trim()) {
+
+    clear.classList.remove(
+      "hide"
+    );
+
+  } else {
+
+    clear.classList.add(
+      "hide"
+    );
+
+  }
+
+
+  renderSemua();
+
+}
+
+
+function hapusPencarian() {
+
+  document.getElementById(
+    "searchInput"
+  ).value = "";
+
+
+  document.getElementById(
+    "clearSearch"
+  ).classList.add(
+    "hide"
+  );
+
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// FILTER
+// =================================================
+
+function setFilter(
+  filter
+) {
+
+  filterAktif =
+    filter;
+
+
+  document
+    .querySelectorAll(
+      ".filter-btn"
+    )
+    .forEach(btn => {
+
+      btn.classList.remove(
+        "bg-red-600",
+        "text-white"
+      );
+
+      btn.classList.add(
+        "bg-gray-100"
+      );
+
+    });
+
+
+  const active =
+    document.getElementById(
+      "filter-" + filter
+    );
+
+
+  active.classList.remove(
+    "bg-gray-100"
+  );
+
+
+  active.classList.add(
+    "bg-red-600",
+    "text-white"
+  );
+
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// COCOK DENGAN PENCARIAN
+// =================================================
+
+function cocokDenganPencarian(
+  item
+) {
+
+  const search =
+    document.getElementById(
+      "searchInput"
+    ).value
+      .trim()
+      .toLowerCase();
+
+
+  if (!search) {
+    return true;
+  }
+
+
+  return (
+
+    item.name
+      .toLowerCase()
+      .includes(search)
+
+    ||
+
+    item.plu
+      .toLowerCase()
+      .includes(search)
+
+  );
+
+}
+
+
+// =================================================
+// RENDER SEMUA
+// =================================================
+
+function renderSemua() {
+
+  const container =
+    document.getElementById(
+      "listTersimpan"
+    );
+
+
+  container.innerHTML = "";
+
+
+  let items =
+    [...data.items];
+
+
+  // FILTER
+
+  if (
+    filterAktif ===
+    "kategori"
+  ) {
+
+    items =
+      items.filter(
+        item =>
+          item.categoryId !== null
+      );
+
+  }
+
+
+  if (
+    filterAktif ===
+    "biasa"
+  ) {
+
+    items =
+      items.filter(
+        item =>
+          item.categoryId === null
+      );
+
+  }
+
+
+  // SEARCH
+
+  items =
+    items.filter(
+      item =>
+        cocokDenganPencarian(item)
+    );
+
+
+  if (items.length === 0) {
+
+    container.innerHTML = `
+
+      <div class="text-center py-10 text-gray-400">
+
+        <div class="text-3xl mb-2">
+          ${
+            data.items.length === 0
+              ? "📦"
+              : "🔎"
+          }
+        </div>
+
+        <div class="text-sm">
+
+          ${
+            data.items.length === 0
+              ? "Belum ada barcode tersimpan."
+              : "Barcode tidak ditemukan."
+          }
+
+        </div>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  // =================================================
+  // KATEGORI
+  // =================================================
+
+  data.categories.forEach(
+    category => {
+
+      if (
+        filterAktif ===
+        "biasa"
+      ) return;
+
+
+      const categoryItems =
+        items.filter(
+          item =>
+            item.categoryId ===
+            category.id
+        );
+
+
+      if (
+        categoryItems.length === 0
+      ) return;
+
+
+      container.innerHTML += `
+
+        <div
+          class="mb-6"
+          id="cat_${category.id}"
+        >
+
+          <!-- HEADER -->
+
+          <div
+            class="flex justify-between items-center mb-2"
+          >
+
+            <div>
+
+              <div class="font-bold text-base">
+                📁 ${escapeHTML(category.name)}
+              </div>
+
+              <div class="text-xs text-gray-400">
+                ${categoryItems.length} barcode
+              </div>
+
+            </div>
+
+
+            <button
+              onclick="hapusKategori('${category.id}')"
+              class="text-xs text-red-500"
+            >
+              Hapus
+            </button>
+
+          </div>
+
+
+          <!-- BARCODE KATEGORI -->
+
+          <div id="cat-list-${category.id}"></div>
+
+        </div>
+
+      `;
+
+
+      const list =
+        document.getElementById(
+          "cat-list-" +
+          category.id
+        );
+
+
+      categoryItems.forEach(
+        item => {
+
+          list.innerHTML +=
+            kartuBarcode(item);
+
+        }
+      );
+
+    }
+  );
+
+
+  // =================================================
+  // NON KATEGORI
+  // =================================================
+
+  const biasa =
+    items.filter(
+      item =>
+        item.categoryId ===
+        null
+    );
+
+
+  if (
+    biasa.length > 0 &&
+    filterAktif !== "kategori"
+  ) {
+
+    container.innerHTML += `
+
+      <div class="mb-5">
+
+        <div class="font-bold mb-2">
+          📦 Non Kategori / Biasa
+        </div>
+
+        <div class="text-xs text-gray-400 mb-2">
+          ${biasa.length} barcode
+        </div>
+
+        <div id="listBiasa"></div>
+
+      </div>
+
+    `;
+
+
+    const listBiasa =
+      document.getElementById(
+        "listBiasa"
+      );
+
+
+    biasa.forEach(
+      item => {
+
+        listBiasa.innerHTML +=
+          kartuBarcode(item);
+
+      }
+    );
+
+  }
+
+}
+
+
+// =================================================
+// KARTU BARCODE
+// BARCODE KATEGORI BISA DIPENCET
+// =================================================
+
+function kartuBarcode(item) {
+
+  const barcodeId =
+    "saved_" +
+    item.id;
+
+
+  setTimeout(() => {
+
+    const svg =
+      document.getElementById(
+        barcodeId
+      );
+
+
+    if (!svg) return;
+
+
+    try {
+
+      JsBarcode(
+        svg,
+        item.plu,
+        {
+
+          format:
+            item.format,
+
+          width: 1.7,
+
+          height: 60,
+
+          displayValue: true,
+
+          fontSize: 13,
+
+          margin: 8,
+
+          textMargin: 3,
+
+          background: "#ffffff",
+
+          lineColor: "#111111"
+
+        }
+      );
+
+    }
+
+    catch (err) {
+
+      svg.innerHTML = "";
+
+    }
+
+  }, 0);
+
+
+  return `
+
+    <div
+      class="border border-gray-200 rounded-xl p-4 mb-3 bg-white"
+    >
+
+      <!-- INFO -->
+
+      <div
+        class="flex justify-between items-start gap-3 mb-3"
+      >
+
+        <div class="min-w-0">
+
+          <div class="font-bold truncate">
+            ${escapeHTML(item.name)}
+          </div>
+
+          <div
+            class="mt-1 text-red-600 font-bold text-base"
+          >
+            ${escapeHTML(item.plu)}
+          </div>
+
+          <div
+            class="text-xs text-gray-400 mt-1"
+          >
+            ${escapeHTML(item.format)}
+          </div>
+
+        </div>
+
+
+        <!-- HAPUS -->
+
+        <button
+          onclick="
+            event.stopPropagation();
+            hapusBarcode('${item.id}')
+          "
+          class="shrink-0 bg-gray-100 text-gray-500 px-3 py-2 rounded-lg text-xs font-semibold"
+        >
+          Hapus
+        </button>
+
+      </div>
+
+
+      <!-- BARCODE YANG BISA DIPENCET -->
+
+      <div
+        class="saved-barcode-box p-3"
+        onclick="perbesarBarcodeTersimpan('${item.id}')"
+      >
+
+        <svg
+          id="${barcodeId}"
+        ></svg>
+
+      </div>
+
+
+      <div
+        class="text-center text-xs text-gray-400 mt-2"
+      >
+        Tekan barcode untuk memperbesar
+      </div>
+
+    </div>
+
+  `;
+
+}
+
+
+// =================================================
+// HAPUS BARCODE
+// =================================================
+
+function hapusBarcode(id) {
+
+  if (
+    !confirm(
+      "Hapus barcode ini?"
+    )
+  ) return;
+
+
+  data.items =
+    data.items.filter(
+      item =>
+        item.id !== id
+    );
+
+
+  saveData();
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// HAPUS KATEGORI
+// =================================================
+
+function hapusKategori(id) {
+
+  const category =
+    data.categories.find(
+      c => c.id === id
+    );
+
+
+  if (!category)
+    return;
+
+
+  const jumlah =
+    data.items.filter(
+      item =>
+        item.categoryId === id
+    ).length;
+
+
+  if (
+    !confirm(
+      `Hapus kategori "${category.name}"?\n\n${jumlah} barcode di dalamnya juga akan dihapus.`
+    )
+  ) return;
+
+
+  data.categories =
+    data.categories.filter(
+      c => c.id !== id
+    );
+
+
+  data.items =
+    data.items.filter(
+      item =>
+        item.categoryId !== id
+    );
+
+
+  saveData();
+
+  renderSemua();
+
+}
+
+
+// =================================================
+// ESCAPE HTML
+// =================================================
+
+function escapeHTML(text) {
+
+  return String(text)
+
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
+}
+
+
+// =================================================
+// START
+// =================================================
+
+renderSemua();
+
+</script>
+
+</body>
+        </html>
